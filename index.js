@@ -54,7 +54,19 @@ scene.add(grid);
 
 // 2 The Objects
 
-const loader = new GLTFLoader();
+const material = new MeshLambertMaterial();
+const geometry = new BoxGeometry();
+
+const cubeMesh = new Mesh(geometry,material);
+const cubeMesh2 = new Mesh(geometry,material);
+cubeMesh2.position.x +=2;
+scene.add(cubeMesh);
+scene.add(cubeMesh2);
+
+const cubes = [cubeMesh,cubeMesh2]; 
+
+
+/* const loader = new GLTFLoader();
 const loadingScreen = document.getElementById('loader-container');
 const progressText = document.getElementById('progress-text');
 
@@ -71,7 +83,7 @@ loader.load('./police_station.glb',
 (error)=>{
   console.log(error);
 }
-);
+); */
 
 
 // 3 The camara
@@ -142,10 +154,71 @@ CameraControls.install({THREE: subsetOfTHREE});
 const clock = new Clock();
 const cameraControls = new CameraControls(camera,canvas);
 cameraControls.dollyToCursor = true; // Zoom to the cursor
-cameraControls.setLookAt(18,20,22,0,10,0);
+cameraControls.setLookAt(5,5,5,0,0,0);
 
 
-// 8 Animation
+// 8 Picking (raycasting)
+
+const raycaster = new Raycaster();
+const mouse = new Vector2(); //position of the mouse
+const previousSelection={
+  mesh: null,
+  material: null
+};
+const highlightMat = new MeshLambertMaterial({color:'red'});
+
+window.addEventListener('mousemove', (event)=>{
+  getMousePosition(event);
+  raycaster.setFromCamera(mouse,camera);
+  const intersections = raycaster.intersectObjects(cubes);
+  
+  if(hasNoCollisions(intersections)){
+    restorePreviousSelection();   
+    return;
+  };
+
+  const founditem = intersections[0];  
+
+  if(isPreviousSelection(founditem)) return;
+
+  restorePreviousSelection();
+  savePreviousSelection(founditem);
+  highlightItem(founditem);  
+})
+
+function getMousePosition(event){
+  mouse.x = event.clientX / canvas.clientWidth * 2 - 1;
+  mouse.y = -(event.clientY / canvas.clientHeight) * 2 + 1;
+}
+
+function hasNoCollisions(intersections){
+  return (intersections.length === 0);
+}
+
+function highlightItem(item){
+  item.object.material = highlightMat;
+}
+
+function isPreviousSelection(item){
+  return (previousSelection.mesh === item.object);
+}
+
+function savePreviousSelection(item){
+  previousSelection.mesh = item.object;
+  previousSelection.material =  item.object.material;
+}
+
+function restorePreviousSelection(){
+  if(previousSelection.mesh){
+    previousSelection.mesh.material = previousSelection.material;
+    previousSelection.mesh=null;
+    previousSelection.material=null;
+  };
+}
+
+
+
+// 9 Animation
 function animate() {
   const delta = clock.getDelta();
   cameraControls.update(delta);

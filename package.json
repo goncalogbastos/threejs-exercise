@@ -18,5 +18,13 @@
     "gsap": "^3.10.4",
     "three": "^0.142.0"
   },
-  "description": ""
+  "description": "",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/goncalogbastos/threejs-exercise.git"
+  },
+  "bugs": {
+    "url": "https://github.com/goncalogbastos/threejs-exercise/issues"
+  },
+  "homepage": "https://github.com/goncalogbastos/threejs-exercise#readme"
 }
