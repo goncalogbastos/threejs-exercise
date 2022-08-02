@@ -35,6 +35,7 @@ import CameraControls from "camera-controls";
 import GUI from 'three/examples/jsm/libs/lil-gui.module.min.js'
 import gsap from 'gsap';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
+import{CSS2DRenderer,CSS2DObject} from 'three/examples/jsm/renderers/CSS2DRenderer.js'
 
 
 // 1 The Scene
@@ -54,7 +55,7 @@ scene.add(grid);
 
 // 2 The Objects
 
-const material = new MeshLambertMaterial();
+/* const material = new MeshLambertMaterial();
 const geometry = new BoxGeometry();
 
 const cubeMesh = new Mesh(geometry,material);
@@ -64,26 +65,32 @@ scene.add(cubeMesh);
 scene.add(cubeMesh2);
 
 const cubes = [cubeMesh,cubeMesh2]; 
+ */
 
 
-/* const loader = new GLTFLoader();
+
+
+
+
+const loader = new GLTFLoader();
 const loadingScreen = document.getElementById('loader-container');
 const progressText = document.getElementById('progress-text');
+let policeStation;
 
 loader.load('./police_station.glb',
 (gltf)=>{
-  scene.add(gltf.scene);
+  policeStation=gltf.scene
+  scene.add(policeStation);
   loadingScreen.classList.add('hidden');
 },
 (progress)=>{
-  console.log(progress);
   const progressPercent = Math.trunc(progress.loaded/progress.total * 100);
   progressText.textContent = `Loading: ${progressPercent}%`
 },
 (error)=>{
   console.log(error);
 }
-); */
+);
 
 
 // 3 The camara
@@ -105,6 +112,14 @@ const pixelRat = Math.min(window.devicePixelRatio, 2);
 renderer.setPixelRatio(pixelRat);
 renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
 renderer.setClearColor(0x3E3E3E,1);
+
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
+labelRenderer.domElement.style.position = 'absolute';
+labelRenderer.domElement.style.pointerEvents = 'none';
+labelRenderer.domElement.style.top = '0';
+document.body.appendChild(labelRenderer.domElement);
+
 
 
 
@@ -129,6 +144,7 @@ window.addEventListener("resize", () => {
   camera.aspect = canvas.clientWidth / canvas.clientHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
+  labelRenderer.setSize(canvas.clientWidth, canvas.clientHeight);
 });
 
 
@@ -157,9 +173,60 @@ cameraControls.dollyToCursor = true; // Zoom to the cursor
 cameraControls.setLookAt(5,5,5,0,0,0);
 
 
-// 8 Picking (raycasting)
+// 8 Picking
+
 
 const raycaster = new Raycaster();
+const mouse = new Vector2();
+window.addEventListener('dblclick', (event) => {
+  getMousePosition(event);
+  raycaster.setFromCamera(mouse,camera);
+  const intersections = raycaster.intersectObject(policeStation);
+  if(hasNoCollisions(intersections)) return;
+  const collision = intersections[0].point; 
+
+  const message = window.prompt('Annotation: ')
+
+  const container = document.createElement('div');
+  container.className = 'label-container';
+
+  const deleteButton = document.createElement('button');
+  deleteButton.textContent = 'X';
+  deleteButton.className = 'delete-button hidden';
+  container.appendChild(deleteButton);
+
+
+  const label = document.createElement('p');
+  label.textContent = message;
+  label.classList.add('label');
+  container.appendChild(label);
+
+  const labelObject = new CSS2DObject(container);
+  labelObject.position.copy(collision);
+  scene.add(labelObject);
+
+  deleteButton.onclick = ()=>{
+    labelObject.removeFromParent();
+    labelObject.element = null;
+    container.remove();
+  }
+
+  container.onmouseenter = () => deleteButton.classList.remove('hidden');
+  container.onmouseleave = () => deleteButton.classList.add('hidden');
+  
+})
+
+function getMousePosition(event){
+  mouse.x = event.clientX / canvas.clientWidth * 2 - 1;
+  mouse.y = -(event.clientY / canvas.clientHeight) * 2 + 1;
+}
+
+function hasNoCollisions(intersections){
+  return (intersections.length === 0);
+}
+
+
+/* const raycaster = new Raycaster();
 const mouse = new Vector2(); //position of the mouse
 const previousSelection={
   mesh: null,
@@ -214,7 +281,7 @@ function restorePreviousSelection(){
     previousSelection.mesh=null;
     previousSelection.material=null;
   };
-}
+} */
 
 
 
@@ -222,8 +289,8 @@ function restorePreviousSelection(){
 function animate() {
   const delta = clock.getDelta();
   cameraControls.update(delta);
-
   renderer.render(scene, camera);
+  labelRenderer.render(scene,camera);
   requestAnimationFrame(animate); // run in an infinite loop
 }
 
